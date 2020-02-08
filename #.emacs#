@@ -1,0 +1,189 @@
+;;
+;; INSTALL:
+;;
+;; darktooth-theme
+;; ag
+;; projectile
+;; web-mode
+;; rubocop
+;; editorconfig
+;; flycheck
+;; prettier-js
+;;
+
+(custom-set-variables
+ ;; custom-set-variables was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ '(custom-enabled-themes (quote (darktooth)))
+ '(custom-safe-themes
+   (quote
+    ("d12c2cae6c13a834084e06a3062d5a27cac7627e0872bd1728d203b46ae6a5bb" default)))
+ '(inhibit-startup-screen t)
+ '(package-selected-packages
+   (quote
+    (prettier-js flycheck editorconfig rubocop web-mode projectile ag darktooth-theme)))
+ '(standard-indent 2)
+ '(tab-width 2))
+(custom-set-faces
+ ;; custom-set-faces was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ )
+
+;; get rid of the ugly toolbar
+(tool-bar-mode -1)
+
+;; ignore case on find-file and shell
+(setq read-file-name-completion-ignore-case t)
+(setq pcomplete-ignore-case t)
+
+(global-set-key (kbd "C-x C-u") 'eshell)
+
+(global-set-key (kbd "C-x C-#") 'find-name-dired)
+(global-set-key (kbd "C-x C-t") 'tabify)
+
+(require 'package)
+
+; list the packages you want
+(setq package-list '(darktooth-theme ag projectile web-mode rubocop editorconfig flycheck prettier-js))
+
+; list the repositories containing them
+(setq package-archives '(("elpa" . "http://tromey.com/elpa/")
+                         ("gnu" . "http://elpa.gnu.org/packages/")
+                         ("marmalade" . "http://marmalade-repo.org/packages/")
+                         ("melpa-stable" . "https://melpa.org/packages/")))
+
+; activate all the packages (in particular autoloads)
+(package-initialize)
+
+; fetch the list of packages available 
+(unless package-archive-contents
+  (package-refresh-contents))
+
+; install the missing packages
+(dolist (package package-list)
+  (unless (package-installed-p package)
+    (package-install package)))
+
+
+(when (< emacs-major-version 24)
+  ;; For important compatibility libraries like cl-lib
+  (add-to-list 'package-archives '("gnu" . "http://elpa.gnu.org/packages/")))
+
+;;Set backup location to home dir not working file dir
+(setq backup-directory-alist `(("." . "~/.saves")))
+
+(column-number-mode)
+
+(load-theme 'darktooth t)
+
+;;
+;; Searching and package junk
+(require 'ag)
+(require 'projectile)
+(projectile-mode +1)
+(define-key projectile-mode-map (kbd "s-p") 'projectile-command-map)
+(define-key projectile-mode-map (kbd "C-c p") 'projectile-command-map)
+
+(require 'web-mode)
+;; set regular js files to respond to react components
+;; set regular html files be django templates
+(require 'prettier-js)
+
+(setq prettier-js-args '(
+  "--no-semi"
+))
+
+;; define a separate mode for jsx as we don't want to lint
+;; all web-mode files the same
+(define-derived-mode jsx-web-mode web-mode
+  "web-jsx"
+)
+
+(add-to-list 'auto-mode-alist '("\\.jsx\\'" . jsx-web-mode))
+(add-to-list 'auto-mode-alist '("\\.js?\\'" . jsx-web-mode))
+(add-to-list 'auto-mode-alist '("\\.erb\\'" . web-mode))
+(add-to-list 'auto-mode-alist '("\\.phtml\\'" . web-mode))
+(add-to-list 'auto-mode-alist '("\\.tpl\\.php\\'" . web-mode))
+(add-to-list 'auto-mode-alist '("\\.[agj]sp\\'" . web-mode))
+(add-to-list 'auto-mode-alist '("\\.as[cp]x\\'" . web-mode))
+(add-to-list 'auto-mode-alist '("\\.erb\\'" . web-mode))
+(add-to-list 'auto-mode-alist '("\\.mustache\\'" . web-mode))
+(add-to-list 'auto-mode-alist '("\\.djhtml\\'" . web-mode))
+(add-to-list 'auto-mode-alist '("\\.html?\\'" . web-mode))
+(add-to-list 'auto-mode-alist '("\\.scss?\\'" . web-mode))
+(add-to-list 'auto-mode-alist '("\\.ejs?\\'" . web-mode))
+(add-to-list 'auto-mode-alist '("\\.less?\\'" . css-mode))
+
+;;RAILS
+(add-to-list 'auto-mode-alist '("\\.rake\\'" . ruby-mode))
+
+(setq-default indent-tabs-mode nil)
+
+(defun my-web-mode-hook ()
+  "Hooks for Web mode."
+  (setq web-mode-markup-indent-offset 2)
+)
+(add-hook 'web-mode-hook  'my-web-mode-hook)
+(add-hook 'web-mode-hook 'prettier-js-mode)
+
+(require 'rubocop)
+(require 'editorconfig)
+(editorconfig-mode 1)
+
+(put 'scroll-left 'disabled nil)
+
+;; turn off the annoying emacs adding coding magic comment
+(setq ruby-insert-encoding-magic-comment nil)
+
+;; LINTING
+(require 'flycheck)
+;; turn on flychecking globally
+(add-hook 'after-init-hook #'global-flycheck-mode)
+
+;; disable jshint since we prefer eslint checking
+(setq-default flycheck-disabled-checkers
+  (append flycheck-disabled-checkers
+    '(javascript-jshint)))
+
+;; use eslint with web-mode for js files
+(flycheck-add-mode 'javascript-eslint 'jsx-web-mode)
+
+;; customize flycheck temp file prefix
+(setq-default flycheck-temp-prefix ".flycheck")
+
+;; disable json-jsonlist checking for json files
+(setq-default flycheck-disabled-checkers
+  (append flycheck-disabled-checkers
+    '(json-jsonlist)))
+
+;; disable the linter for emacs-lisp files as they're annoying in the config
+;; also disable the rubocop linter, needs more set up before I can use it with OL
+;; Will default to regular Ruby linter which works okay
+(setq-default flycheck-disabled-checkers
+  (append flycheck-disabled-checkers
+    '(emacs-lisp emacs-lisp-checkdoc ruby-rubocop ruby)))
+
+;; use local eslint from node_modules before global
+;; http://emacs.stackexchange.com/questions/21205/flycheck-with-file-relative-eslint-executable
+(defun my/use-eslint-from-node-modules ()
+  (let ((root (locate-dominating-file
+               (or (buffer-file-name) default-directory)
+               (lambda (dir)
+                 (let ((eslint (expand-file-name "node_modules/eslint/bin/eslint.js" dir)))
+                  (and eslint (file-executable-p eslint)))))))
+    (when root
+      (let ((eslint (expand-file-name "node_modules/eslint/bin/eslint.js" root)))
+        (setq-local flycheck-javascript-eslint-executable eslint)))))
+(add-hook 'flycheck-mode-hook #'my/use-eslint-from-node-modules)
+
+(setq web-mode-content-types-alist
+  '(("jsx" . "\\.js[x]?\\'")))
+
+;; Python linting
+(defun flycheck-python-setup ()
+  (flycheck-mode))
+(add-hook 'python-mode-hook #'flycheck-python-setup)
